@@ -16,6 +16,38 @@ const upload = multer({ storage: storage })
 
 
 // crud => create read update delete 
+// search product 
+app.get("/product/search", async (req, res) => {
+
+    const { q } = req.query
+
+    if(!q){
+        return res.json({
+            message: "Product not found."
+        })
+    }
+
+    try {
+        const product = await Product.find({
+            $or: [
+                { name: { $regex: q, $options: "i" } },
+                { description: { $regex: q, $options: "i" } },
+            ]
+        });
+
+        res.json({
+            message: "Search result fetched successfully.",
+            data: product
+        })
+    } catch {
+        res.status(500).json({
+            message: "An error occured while searching for product."
+        })
+    } 
+})
+
+
+// get all product 
 app.get('/product', async (req, res) => {
     const products = await Product.find()
     res.json({
@@ -24,6 +56,7 @@ app.get('/product', async (req, res) => {
     })
 })
 
+// get product by id 
 app.get('/product/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -34,7 +67,7 @@ app.get('/product/:id', async (req, res) => {
                 success: false,
                 message: "Invalid product ID format.",
             });
-        } 
+        }
 
         const singleProduct = await Product.findById(id);
 
@@ -44,7 +77,7 @@ app.get('/product/:id', async (req, res) => {
                 message: "Product not found!",
             });
         }
- 
+
         res.json({
             success: true,
             message: "Product fetched successfully!",
@@ -60,9 +93,20 @@ app.get('/product/:id', async (req, res) => {
     }
 });
 
+// update product  
+app.patch("/product/:id", async (req, res) => {
 
+    const { id } = req.params
+    const { name, description, price, image } = req.body;
 
+    await Product.findByIdAndUpdate(id, { name, description, price, image })
 
+    res.json({
+        message: "Product updated successfully!"
+    })
+})
+
+// delete product by id 
 app.delete('/product/:id', async (req, res) => {
     const { id } = req.params;
     await Product.findByIdAndDelete(id);
@@ -72,7 +116,7 @@ app.delete('/product/:id', async (req, res) => {
 })
 
 
-
+// create product 
 app.post('/product', upload.single('image'), async (req, res) => {
     console.log(req.body)
     console.log(req.file)
