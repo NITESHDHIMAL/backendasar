@@ -4,6 +4,7 @@ const connectDatabase = require('./database');
 const Product = require('./model/productModel');
 const multer = require('multer');
 const { storage } = require('./middleware/multerConfig');
+const Category = require('./model/categoryModel');
 
 const app = express();
 
@@ -49,9 +50,23 @@ app.get("/product/search", async (req, res) => {
 
 // get all product 
 app.get('/product', async (req, res) => {
-    const products = await Product.find()
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 2; 
+    const sortField = req.query.sortField || 'createdAt';
+    const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+
+
+    const skip = (page - 1) * limit;
+
+    const products = await Product.find().skip(skip).limit(limit).sort({[sortField]: sortOrder});
+
+    const total = await Product.countDocuments()
+
     res.json({
         message: "Product fetched successfully.",
+        currentPage: page,
+        totalPages: Math.ceil(total/limit),
+        totalItems: total,
         data: products
     })
 })
@@ -132,6 +147,30 @@ app.post('/product', upload.single('image'), async (req, res) => {
         data: product
     })
 })
+
+
+// category create 
+app.post('/category', upload.single('image'), async (req, res) => { 
+    const { name, description} = req.body 
+
+    const category = await Category.create({ name, description})
+
+    res.status(201).json({
+        message: "Category created successfully!",
+        data: category
+    })
+})
+
+
+// ******** category ********* 
+app.get('/category', async (req,res) => { 
+    const category = await Category.find() 
+    res.json({
+        message: "Category fetched successfully.",
+        data:category,
+    })
+})
+
 
 
 app.listen(process.env.PORT, () => {
