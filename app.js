@@ -5,6 +5,7 @@ const Product = require('./model/productModel');
 const multer = require('multer');
 const { storage } = require('./middleware/multerConfig');
 const Category = require('./model/categoryModel');
+const User = require('./model/userModel');
 
 const app = express();
 
@@ -22,7 +23,7 @@ app.get("/product/search", async (req, res) => {
 
     const { q } = req.query
 
-    if(!q){
+    if (!q) {
         return res.json({
             message: "Product not found."
         })
@@ -44,28 +45,28 @@ app.get("/product/search", async (req, res) => {
         res.status(500).json({
             message: "An error occured while searching for product."
         })
-    } 
+    }
 })
 
 
 // get all product 
 app.get('/product', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 2; 
+    const limit = parseInt(req.query.limit) || 2;
     const sortField = req.query.sortField || 'createdAt';
     const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
 
 
     const skip = (page - 1) * limit;
 
-    const products = await Product.find().skip(skip).limit(limit).sort({[sortField]: sortOrder});
+    const products = await Product.find().skip(skip).limit(limit).sort({ [sortField]: sortOrder });
 
     const total = await Product.countDocuments()
 
     res.json({
         message: "Product fetched successfully.",
         currentPage: page,
-        totalPages: Math.ceil(total/limit),
+        totalPages: Math.ceil(total / limit),
         totalItems: total,
         data: products
     })
@@ -150,10 +151,10 @@ app.post('/product', upload.single('image'), async (req, res) => {
 
 
 // category create 
-app.post('/category', upload.single('image'), async (req, res) => { 
-    const { name, description} = req.body 
+app.post('/category', upload.single('image'), async (req, res) => {
+    const { name, description } = req.body
 
-    const category = await Category.create({ name, description})
+    const category = await Category.create({ name, description })
 
     res.status(201).json({
         message: "Category created successfully!",
@@ -163,16 +164,72 @@ app.post('/category', upload.single('image'), async (req, res) => {
 
 
 // ******** category ********* 
-app.get('/category', async (req,res) => { 
-    const category = await Category.find() 
+app.get('/category', async (req, res) => {
+    const category = await Category.find()
     res.json({
         message: "Category fetched successfully.",
-        data:category,
+        data: category,
     })
 })
 
 
+// ****** auth ********* 
 
+app.post('/register', async (req, res) => {
+
+    const { name, email, password } = req.body
+
+    try {
+        // check if the user already exists
+        let user = await User.findOne({ email });
+
+        if (user) {
+            return res.status(400).json({ message: "User already exists." })
+        }
+
+        //create a new user 
+        user = new User({ name, email, password });
+
+        await user.save();
+
+        res.status(201).json({
+            message: "User registered successfully.",
+            data: user
+        })
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message })
+    }
+})
+
+
+//login a user 
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Check if the user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Check if the password matches
+    const isMatch = await user.matchPasword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    } 
+
+    res.status(200).json({
+      message: "Login successful", 
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+
+ 
 app.listen(process.env.PORT, () => {
     console.log("Server started!")
 })
