@@ -6,12 +6,16 @@ const multer = require('multer');
 const { storage } = require('./middleware/multerConfig');
 const Category = require('./model/categoryModel');
 const User = require('./model/userModel');
+const jwt = require('jsonwebtoken');
+
 
 const app = express();
 
 app.use(express.json());
 
 connectDatabase();
+
+const protectroute = require("./authMiddleware")
 
 // for file uploading 
 const upload = multer({ storage: storage })
@@ -50,7 +54,7 @@ app.get("/product/search", async (req, res) => {
 
 
 // get all product 
-app.get('/product', async (req, res) => {
+app.get('/product', protectroute, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 2;
     const sortField = req.query.sortField || 'createdAt';
@@ -133,7 +137,7 @@ app.delete('/product/:id', async (req, res) => {
 
 
 // create product 
-app.post('/product', upload.single('image'), async (req, res) => {
+app.post('/product', protectroute, upload.single('image'), async (req, res) => {
     console.log(req.body)
     console.log(req.file)
     const { name, price, description, image } = req.body
@@ -220,8 +224,14 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     } 
 
+    //Generate a JWT 
+    const token = jwt.sign( {id: user._id, role: user.role}, process.env.JWT_SECRET,{
+        expiresIn: "1h"
+    })
+
     res.status(200).json({
       message: "Login successful", 
+      token: token
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
