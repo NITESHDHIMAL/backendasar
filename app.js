@@ -7,6 +7,7 @@ const { storage } = require('./middleware/multerConfig');
 const Category = require('./model/categoryModel');
 const User = require('./model/userModel');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 
 
 const app = express();
@@ -20,6 +21,15 @@ const protectroute = require("./authMiddleware")
 // for file uploading 
 const upload = multer({ storage: storage })
 
+const corsOptions = {
+    origin: [ 'http://localhost:5173', 'https://mernecommercesecond.vercel.app'],
+    methods: [ 'GET, POST, PUT, DELETE'],
+    allowedHeaders: [ 'Content-Type', 'Authorization' ],
+    credentials: true,
+}
+
+// allow all url 
+app.use(cors(corsOptions));
 
 // crud => create read update delete 
 // search product 
@@ -54,7 +64,7 @@ app.get("/product/search", async (req, res) => {
 
 
 // get all product 
-app.get('/product', protectroute, async (req, res) => {
+app.get('/product', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 2;
     const sortField = req.query.sortField || 'createdAt';
